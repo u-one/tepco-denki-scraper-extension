@@ -17,10 +17,57 @@ function getData() {
     valueMap.set(header, fs)
   };
 
-  var output = function() {
+  var print = function() {
       valueMap.forEach(function(value, key) {
         console.log(key + ":" + value)
       })
+  }
+
+  var asCsv = function() {
+      var sep = ","
+      var header = ""
+      var values = ""
+      var i = 0;
+      valueMap.forEach(function(value, key) {
+          if (i > 0) {
+            header = header + sep + key
+            values = values + sep + value
+          } else {
+            header = key
+            values = value
+          }
+          i++
+      })
+
+      var tb = document.querySelector("#denki-scraper-text")
+      tb.value = header + "\n" + values;
+      tb.select()
+      try {
+        document.execCommand('copy')
+      } catch(err) {
+        console.log(err)
+      }
+
+  }
+
+  var appendOutputField = function() {
+    var parent = document.querySelector(".info-select")
+    var tb = parent.querySelector("#denki-scraper-text")
+    if (tb) {
+      parent.removeChild(tb)
+    }
+    tb = document.createElement("textarea")
+    tb.id = 'denki-scraper-text'
+    tb.style.width = "90%"
+    tb.style.height = "auto"
+    tb.wrap = "off"
+    parent.appendChild(tb)
+  }
+
+  var output = function() {
+    print()
+    appendOutputField()
+    asCsv()
   }
 
   // 対象年月
