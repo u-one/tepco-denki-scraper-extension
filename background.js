@@ -132,7 +132,7 @@ function getData() {
   var trElem = usedRows[0] // "2月10日～ 3月11日"
   var header = trElem.querySelector("th").textContent
   var value = trElem.querySelector("td").textContent
-  vars = value.match(/(\d+)月(\d+)日～ (\d+)月(\d+)日/)
+  vars = value.match(/(\d+)月(\d+)日～ *(\d+)月 *(\d+)日/)
   var duration = vars[1] + "/" + vars[2] + "-" + vars[3] + "/" + vars[4]
   valueMap.set(header, duration)
 
