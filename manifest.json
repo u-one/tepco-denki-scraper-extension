@@ -1,0 +1,14 @@
+{
+  "name": "東電Web検針票データ取得",
+  "action": {},
+  "manifest_version": 3,
+  "version": "0.1",
+  "description": "東京電力のWeb検針票の表示内容をデータとして取得します",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}
