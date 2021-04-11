@@ -23,8 +23,8 @@ function getData() {
       })
   }
 
-  var asCsv = function() {
-      var sep = ","
+  var asTsv = function() {
+      var sep = "\t"
       var header = ""
       var values = ""
       var i = 0;
@@ -39,8 +39,9 @@ function getData() {
           i++
       })
 
+      var tsv = header + "\n" + values
       var tb = document.querySelector("#denki-scraper-text")
-      tb.value = header + "\n" + values;
+      tb.value = tsv;
       tb.select()
       try {
         document.execCommand('copy')
@@ -67,7 +68,7 @@ function getData() {
   var output = function() {
     print()
     appendOutputField()
-    asCsv()
+    asTsv()
   }
 
   // 対象年月
