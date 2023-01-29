@@ -11,8 +11,11 @@ function getData() {
   var parseTableRowAsYen = function(trElem) {
     var header = trElem.querySelector("th").textContent
     var value = trElem.querySelector("td").textContent // 1,230円00銭
-    var vars = value.match(/([+-\d,]*)円(\d+)銭/);
-    var fs = vars[1] + "." + vars[2]; 
+    var vars = value.match(/([+-\d,]*)円((\d+)銭)?/);
+    var fs = vars[1]; 
+    if (vars[3]) {
+      fs = fs + "." + vars[3]; 
+    }
     //console.log(header + ":" + fs)
     valueMap.set(header, fs)
   };
@@ -127,8 +130,34 @@ function getData() {
  
   var tables = document.querySelectorAll(".info-tbl")
 
+  // 託送料金などのテーブル追加によるフォーマット変化対応(2022/04分から表示される)
+  var isNewFormat = (tables.length == 9) 
+  var consignmentTableIndex = 4
+  var useageTableIndex = 5
+  var adjustmentTableIndex = 6
+  var otherTableIndex = 7
+  var meterTableIndex = 8
+  if (!isNewFormat) {
+    useageTableIndex = 4
+    adjustmentTableIndex = 5
+    otherTableIndex = 6
+    meterTableIndex = 7
+  }
+
+
+  // 託送料金などのテーブル(2022/04から追加)
+  if (isNewFormat) {
+    var consignmentRows = tables[consignmentTableIndex].querySelectorAll("tr")
+    // 託送料金相当額
+    var trElem = consignmentRows[0] 
+    parseTableRowAsYen(trElem)
+    // うち賠償負担金相当額 および廃炉円滑化負担金相当額
+    var trElem = consignmentRows[1] 
+    parseTableRowAsYen(trElem)
+  }
+
   // 使用量テーブル
-  var usedRows = tables[3].querySelectorAll("tr")
+  var usedRows = tables[useageTableIndex].querySelectorAll("tr")
   // 使用期間
   var trElem = usedRows[0] // "2月10日～ 3月11日"
   var header = trElem.querySelector("th").textContent
@@ -148,7 +177,8 @@ function getData() {
   valueMap.set("対象日数", durationDays)
 
   // 燃料費調整額テーブル
-  var adjRows = tables[4].querySelectorAll("tr")
+  var adjRows = tables[adjustmentTableIndex].querySelectorAll("tr")
+
   // 当月分
   var adjustRate = adjRows[0] // "-1円23銭"
   parseTableRowAsYen(adjustRate);
@@ -163,17 +193,27 @@ function getData() {
 
 
   // その他テーブル
-  var otherRows = tables[5].querySelectorAll("tr")
+  var otherRows = tables[otherTableIndex].querySelectorAll("tr")
   // 再エネ発電賦課金単価　（1kWhあたり）
   var surchargeRate = otherRows[0] // "1円23銭"
   parseTableRowAsYen(surchargeRate);
 
+
+  /* 2022/04から削除された項目 (現在は当時の期間選択しても表示されない)
   // 託送料金平均単価（1kWhあたり）
   var consignmentRate = otherRows[1] // "1円23銭"
   parseTableRowAsYen(consignmentRate);
+  */
+  // 2022/04以降の託送料金相当額から計算させてみる
+  if (isNewFormat) {
+    var usedTotal = parseInt(usedEnergyMain.replace(',', ''))
+    var consignment = parseInt(valueMap.get("託送料金相当額").replace(',', ''));
+    var consignmentRate = consignment / usedTotal;
+    valueMap.set("託送料金平均単価（1kWhあたり）", consignmentRate)
+  }
 
   // 計器情報テーブル
-  var meterRows = tables[6].querySelectorAll("tr")
+  var meterRows = tables[meterTableIndex].querySelectorAll("tr")
   // 当月指示数
   var meterCount = meterRows[0] // "12345.6"
   parseTableRow(meterCount)
