@@ -128,38 +128,59 @@ function getData() {
   parseTableRowAsYen(discount);
 
  
-  var tables = document.querySelectorAll(".info-tbl")
+  var tables = document.querySelectorAll(".info-section")
 
   // 託送料金などのテーブル追加によるフォーマット変化対応(2022/04分から表示される)
-  var isNewFormat = (tables.length == 9) 
-  var consignmentTableIndex = 4
-  var useageTableIndex = 5
-  var adjustmentTableIndex = 6
-  var otherTableIndex = 7
-  var meterTableIndex = 8
-  if (!isNewFormat) {
-    useageTableIndex = 4
-    adjustmentTableIndex = 5
-    otherTableIndex = 6
-    meterTableIndex = 7
+  var isAfterFY2022 = (year == 2022 && month >= 4 || year >= 2023)
+  var isAfterFY2023 = (year == 2023 && month >= 4 || year >= 2024) // 2023/04以降
+  var isAfterFY2023_10 = (year == 2023 && month >= 10 || year >= 2024) // 2023/10以降
+  var consignmentTableIndex = 1
+  var useageTableIndex = 2
+  var adjustmentTableIndex = 3
+  var otherTableIndex = 4
+  var meterTableIndex = 5
+  if (!isAfterFY2022) {
+    useageTableIndex = 2
+    adjustmentTableIndex = 3
+    otherTableIndex = 4
+    meterTableIndex = 5
   }
 
 
   // 託送料金などのテーブル(2022/04から追加)
-  if (isNewFormat) {
+  if (isAfterFY2022) {
+    var takusouIndex = 12
+    var baishouIndex = 13
+    if (isAfterFY2023) {
+      takusouIndex = 11
+      baishouIndex = 12
+    }
+    
+    if (isAfterFY2023_10) {
+      takusouIndex = 14
+      baishouIndex = 15
+    }
+
     var consignmentRows = tables[consignmentTableIndex].querySelectorAll("tr")
     // 託送料金相当額
-    var trElem = consignmentRows[0] 
+    var trElem = consignmentRows[takusouIndex]
     parseTableRowAsYen(trElem)
     // うち賠償負担金相当額 および廃炉円滑化負担金相当額
-    var trElem = consignmentRows[1] 
+    var trElem = consignmentRows[baishouIndex] 
     parseTableRowAsYen(trElem)
+  }
+
+  var periodIndex = 0 // 使用期間のtr index
+  var inspectionIndex = 1 // 検診月日のtr index
+  if (isAfterFY2023_10) {
+    periodIndex = 1
+    inspectionIndex = 2
   }
 
   // 使用量テーブル
   var usedRows = tables[useageTableIndex].querySelectorAll("tr")
   // 使用期間
-  var trElem = usedRows[0] // "2月10日～ 3月11日"
+  var trElem = usedRows[periodIndex] // "2月10日～ 3月11日"
   var header = trElem.querySelector("th").textContent
   var value = trElem.querySelector("td").textContent
   vars = value.match(/(\d+)月(\d+)日～ *(\d+)月 *(\d+)日/)
@@ -167,7 +188,7 @@ function getData() {
   valueMap.set(header, duration)
 
   // 検針月日
-  var trElem = usedRows[1] //"3月12日 （30日間）"
+  var trElem = usedRows[inspectionIndex] //"3月12日 （30日間）"
   var header = trElem.querySelector("th").textContent
   var value = trElem.querySelector("td").textContent
   vars = value.match(/(\d+)月(\d+)日 （(\d+)日間）/)
@@ -180,16 +201,30 @@ function getData() {
   var adjRows = tables[adjustmentTableIndex].querySelectorAll("tr")
 
   // 当月分
-  var adjustRate = adjRows[0] // "-1円23銭"
-  parseTableRowAsYen(adjustRate);
+  if (year == 2023 && month == 6) {
+    // 改定日（6/1）前後で適用が異なりますの表記がある
+    var adjustRate = adjRows[1] // "-1円23銭"
+    parseTableRowAsYen(adjustRate);
 
-  // 翌月分
-  var nextAdjustRate = adjRows[1] // "-1円23銭"
-  parseTableRowAsYen(nextAdjustRate);
+    // 翌月分
+    var nextAdjustRate = adjRows[2] // "-1円23銭"
+    parseTableRowAsYen(nextAdjustRate);
 
-  // 翌月は当月に比べ
-  var adjustRateDiff = adjRows[2] // "+0円12銭"
-  parseTableRowAsYen(adjustRateDiff);
+    // 翌月は当月に比べ
+    valueMap.set("翌月は当月に比べ", '-')
+  } else {
+    var adjustRate = adjRows[0] // "-1円23銭"
+    parseTableRowAsYen(adjustRate);
+
+    // 翌月分
+    var nextAdjustRate = adjRows[1] // "-1円23銭"
+    parseTableRowAsYen(nextAdjustRate);
+
+    // 翌月は当月に比べ
+    var adjustRateDiff = adjRows[2] // "+0円12銭"
+    parseTableRowAsYen(adjustRateDiff);
+  }
+
 
 
   // その他テーブル
@@ -205,7 +240,7 @@ function getData() {
   parseTableRowAsYen(consignmentRate);
   */
   // 2022/04以降の託送料金相当額から計算させてみる
-  if (isNewFormat) {
+  if (isAfterFY2022) {
     var usedTotal = parseInt(usedEnergyMain.replace(',', ''))
     var consignment = parseInt(valueMap.get("託送料金相当額").replace(',', ''));
     var consignmentRate = consignment / usedTotal;
