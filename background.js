@@ -9,19 +9,29 @@ function getData() {
   };
 
   var parseTableRowAsYen = function(trElem) {
-    var header = trElem.querySelector("th").textContent
-    var value = trElem.querySelector("td").textContent // 1,230円00銭
-    var vars = value.match(/([+-\d,]*)円((\d+)銭)?/);
-    var fs = vars[1]; 
-    if (vars[3]) {
-      fs = fs + "." + vars[3]; 
+    try {
+      var header = trElem.querySelector("th").textContent
+      var value = trElem.querySelector("td").textContent // 1,230円00銭
+      var fs = parseValueAsYen(value);
+      //console.log(header + ":" + fs)
+      valueMap.set(header, fs)
+    } catch (err) {
+      console.log("parseTableRowAsYen失敗: trElem:" + trElem + " err:" + err);
+      console.log(err.stack);
     }
-    //console.log(header + ":" + fs)
-    valueMap.set(header, fs)
   };
 
-  var print = function() {
-      valueMap.forEach(function(value, key) {
+  var parseValueAsYen = function(value) {
+    var vars = value.match(/([+-\d,]*)円((\d+)銭)?/);
+    var fs = vars[1];
+    if (vars[3]) {
+      fs = fs + "." + vars[3];
+    }
+    return fs;
+  }
+
+  var print = function () {
+    valueMap.forEach(function (value, key) {
         console.log(key + ":" + value)
       })
   }
@@ -134,6 +144,7 @@ function getData() {
   var isAfterFY2022 = (year == 2022 && month >= 4 || year >= 2023)
   var isAfterFY2023 = (year == 2023 && month >= 4 || year >= 2024) // 2023/04以降
   var isAfterFY2023_10 = (year == 2023 && month >= 10 || year >= 2024) // 2023/10以降
+  var isAfterFY2024_10 = (year == 2024 && month >= 10 || year >= 2025) // 2024/10以降
   var consignmentTableIndex = 1
   var useageTableIndex = 2
   var adjustmentTableIndex = 3
@@ -161,13 +172,26 @@ function getData() {
       baishouIndex = 15
     }
 
-    var consignmentRows = tables[consignmentTableIndex].querySelectorAll("tr")
-    // 託送料金相当額
-    var trElem = consignmentRows[takusouIndex]
-    parseTableRowAsYen(trElem)
-    // うち賠償負担金相当額 および廃炉円滑化負担金相当額
-    var trElem = consignmentRows[baishouIndex] 
-    parseTableRowAsYen(trElem)
+    if (isAfterFY2024_10) {
+      var consignmentTable = tables[consignmentTableIndex].querySelectorAll(".info-tbl")[3];
+      var consignmentRows = consignmentTable.querySelectorAll("tr")
+      // 託送料金相当額
+      var trElem = consignmentRows[0]
+      parseTableRowAsYen(trElem)
+      // うち賠償負担金相当額 および廃炉円滑化負担金相当額
+      var trElem = consignmentRows[1]
+      parseTableRowAsYen(trElem)
+
+    } else {
+      var consignmentRows = tables[consignmentTableIndex].querySelectorAll("tr")
+      // 託送料金相当額
+      var trElem = consignmentRows[takusouIndex]
+      parseTableRowAsYen(trElem)
+      // うち賠償負担金相当額 および廃炉円滑化負担金相当額
+      var trElem = consignmentRows[baishouIndex] 
+      parseTableRowAsYen(trElem)
+    }
+    
   }
 
   var periodIndex = 0 // 使用期間のtr index
@@ -242,7 +266,7 @@ function getData() {
   // 2022/04以降の託送料金相当額から計算させてみる
   if (isAfterFY2022) {
     var usedTotal = parseInt(usedEnergyMain.replace(',', ''))
-    var consignment = parseInt(valueMap.get("託送料金相当額").replace(',', ''));
+    var consignment = parseInt(valueMap.get("託送料金相当額")?.replace(',', '') || '-1');
     var consignmentRate = consignment / usedTotal;
     valueMap.set("託送料金平均単価（1kWhあたり）", consignmentRate)
   }
